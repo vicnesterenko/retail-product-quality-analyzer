@@ -6,7 +6,6 @@ N8N_WEBHOOK_URL = "http://localhost:5678/webhook-test/avrora-bad-products"
 
 
 async def scrape_avrora_category(category_url: str):
-    # Розширюємо заголовки, щоб Аврора не думала, що ми робот
     headers = {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
@@ -27,7 +26,6 @@ async def scrape_avrora_category(category_url: str):
                     f"⚠️ Отримано статус {response.status_code}. Вмикаємо режим генерації тест-даних (Mock Mode) для демонстрації n8n...")
                 products = get_mock_products()
             else:
-                # Якщо сторінка успішно завантажилась — парсимо її
                 soup = BeautifulSoup(response.text, 'html.parser')
                 product_cards = soup.find_all('div', class_='product-item')
 
@@ -55,12 +53,10 @@ async def scrape_avrora_category(category_url: str):
                     except (AttributeError, TypeError):
                         continue
 
-                # Якщо парсер нічого не знайшов через зміну верстки сайту — страхуємося mock-даними
                 if not products:
                     print("⚠️ Верстка сайту змінилася. Генеруємо реалістичні дані для тесту воркфлоу...")
                     products = get_mock_products()
 
-            # Надсилаємо зібрані або згенеровані дані в n8n
             if products:
                 print(f"🚀 Надсилаємо {len(products)} товарів у n8n...")
                 async with httpx.AsyncClient() as n8n_client:
@@ -101,6 +97,5 @@ def get_mock_products():
 
 
 if __name__ == "__main__":
-    # Спробуй змінити посилання на головну або точну робочу категорію
     target_url = "https://avrora.ua/ximiya-zasobi-dlya-prannya/"
     asyncio.run(scrape_avrora_category(target_url))
