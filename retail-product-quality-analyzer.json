@@ -1,0 +1,131 @@
+{
+  "name": "retail-product-quality-analyzer",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "avrora-bad-products",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "3ba72f7a-55a2-45b4-b978-4a15e5ed6c41",
+      "name": "Webhook",
+      "webhookId": "33bbf92b-c8c0-4c60-895b-260375a3f1e5"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "body.bad_products",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "8c3bca6e-f302-4a1c-b0a1-0a1d669f99d8",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => {\n  const data = item.json;\n  \n  // Приводимо рейтинг до числа\n  const rating = parseFloat(data.rating || 0);\n  \n  // Визначаємо рівень бізнес-критичності\n  let priority = \"ℹ️ МЕДІУМ (МОНІТОРИНГ)\";\n  if (rating <= 2.5) {\n    priority = \"🚨 КРИТИЧНИЙ ДЕФЕКТ (ТЕРМІНОВО ЗНЯТИ З ПРОДАЖУ)\";\n  } else if (rating <= 3.2) {\n    priority = \"⚠️ ВИСОКИЙ ПРІОРИТЕТ (ПЕРЕВІРИТИ ПАРТІЮ)\";\n  }\n  \n  // Форматуємо масив відгуків через нову лінію\n  const reviewsList = data.reviews || [];\n  const reviewsText = reviewsList.map(r => `- ${r}`).join('\\n');\n  \n  // Повертаємо новий чистий об'єкт\n  return {\n    json: {\n      product_name: data.product_name,\n      product_link: data.product_link,\n      price: data.price,\n      rating: rating,\n      reviews_text: reviewsText,\n      priority: priority\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "b9f78e09-85cd-4423-85c9-bc10f591a711",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => {\n  const data = item.json;\n  \n  // Імітуємо розумні висновки LLM залежно від товару\n  let defect = \"Груба плівка капсули, що не розчиняється у воді\";\n  let action = \"Тимчасово вилучити партію з полиць, надіслати претензію постачальнику.\";\n  \n  if (data.product_name.includes(\"посуду\")) {\n    defect = \"Занадто рідка консистенція, великі репутаційні ризики\";\n    action = \"Провести аудит технологів виробника або замінити бренд.\";\n  }\n\n  return {\n    json: {\n      ...data,\n      ai_analysis: {\n        defect: defect,\n        recommended_action: action\n      }\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        624,
+        0
+      ],
+      "id": "976019aa-ef6e-4739-9f43-4df0c9d8cb24",
+      "name": "AI Agent Analyst (Simulation)"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        832,
+        0
+      ],
+      "id": "8e457035-ef45-4a6a-bf86-0cf7c6f5131b",
+      "name": "Send to Slack/Telegram (Production Only)"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "AI Agent Analyst (Simulation)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent Analyst (Simulation)": {
+      "main": [
+        [
+          {
+            "node": "Send to Slack/Telegram (Production Only)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "47ffea0e-e18d-4d52-b3a6-c4eeb7596f61",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "7db77b961f23fa631cbadacff2941d4313034eeaa4e63d426ae31cc7af8a39c6"
+  },
+  "id": "m0F9DeEAu7sQ85b0",
+  "tags": []
+}
