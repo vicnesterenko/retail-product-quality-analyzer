@@ -1,40 +1,41 @@
 # retail-product-quality-analyzer
 
-Аналізатор якості товарів роздрібного магазину [avrora.ua](https://avrora.ua/).
+A product-quality analyzer for the retail store [avrora.ua](https://avrora.ua/).
 
-Скрипт `scraper.py` збирає товари з низьким рейтингом (≤ 3.5) із категорії
-сайту та надсилає їх у воркфлоу **n8n** через webhook. Якщо сайт недоступний
-або змінив верстку, скрапер автоматично перемикається в **Mock Mode** і
-надсилає реалістичні тест-дані, щоб можна було продемонструвати пайплайн n8n.
+The `scraper.py` script collects low-rated products (rating ≤ 3.5) from a site
+category and sends them to an **n8n** workflow via webhook. If the site is
+unavailable or has changed its markup, the scraper automatically falls back to
+**Mock Mode** and sends realistic test data so the n8n pipeline can still be
+demonstrated.
 
-## Архітектура
+## Architecture
 
 ```
 scraper.py  ──POST /webhook-test/avrora-bad-products──►  n8n workflow
                                                           ├─ Webhook
                                                           ├─ Split Out (body.bad_products)
-                                                          ├─ Code (пріоритизація за рейтингом)
+                                                          ├─ Code (prioritization by rating)
                                                           ├─ AI Agent Analyst (Simulation)
                                                           └─ Send to Slack/Telegram (Production Only)
 ```
 
-Воркфлоу n8n імпортується з файлу `retail-product-quality-analyzer.json`.
+The n8n workflow is imported from `retail-product-quality-analyzer.json`.
 
-## Вимоги
+## Requirements
 
 - Python 3.9+
-- Docker (для локального запуску n8n)
+- Docker (to run n8n locally)
 
-Залежності Python — у `requirements.txt`:
+Python dependencies are in `requirements.txt`:
 
 ```
 httpx>=0.27
 beautifulsoup4>=4.12
 ```
 
-## 1. Локальний запуск n8n (Docker)
+## 1. Run n8n locally (Docker)
 
-Підняти n8n локально однією командою:
+Start n8n locally with a single command:
 
 ```bash
 docker run -d --name n8n -p 5678:5678 \
@@ -43,41 +44,41 @@ docker run -d --name n8n -p 5678:5678 \
   n8nio/n8n
 ```
 
-Пояснення прапорців:
+Flag explanation:
 
-| Прапорець | Призначення |
-|-----------|-------------|
-| `-d` | запуск у фоновому режимі (detached) |
-| `--name n8n` | ім'я контейнера |
-| `-p 5678:5678` | проброс порту, UI доступний на http://localhost:5678 |
-| `-e N8N_PYTHON_ENABLED=true` | дозволяє виконання Python-коду в нодах |
-| `-v n8n_data:/home/node/.n8n` | том для збереження воркфлоу та налаштувань між перезапусками |
+| Flag | Purpose |
+|------|---------|
+| `-d` | run in the background (detached) |
+| `--name n8n` | container name |
+| `-p 5678:5678` | port mapping; the UI is available at http://localhost:5678 |
+| `-e N8N_PYTHON_ENABLED=true` | allows running Python code inside nodes |
+| `-v n8n_data:/home/node/.n8n` | volume that persists workflows and settings across restarts |
 
-Після старту відкрийте **http://localhost:5678** у браузері та створіть локальний акаунт.
+Once it has started, open **http://localhost:5678** in your browser and create a local account.
 
-Корисні команди керування контейнером:
+Useful container management commands:
 
 ```bash
-docker logs -f n8n        # дивитися логи
-docker stop n8n           # зупинити
-docker start n8n          # запустити знову
-docker rm -f n8n          # видалити контейнер (том n8n_data лишається)
+docker logs -f n8n        # follow logs
+docker stop n8n           # stop
+docker start n8n          # start again
+docker rm -f n8n          # remove the container (the n8n_data volume stays)
 ```
 
-## 2. Імпорт воркфлоу
+## 2. Import the workflow
 
-1. Відкрийте n8n UI → **Workflows** → **Import from File**.
-2. Виберіть `retail-product-quality-analyzer.json`.
-3. Активуйте воркфлоу або натисніть **Execute Workflow** / **Listen for test event**,
-   щоб увімкнути тестовий webhook на шляху `avrora-bad-products`.
+1. Open the n8n UI → **Workflows** → **Import from File**.
+2. Select `retail-product-quality-analyzer.json`.
+3. Activate the workflow, or click **Execute Workflow** / **Listen for test event**
+   to enable the test webhook on the `avrora-bad-products` path.
 
-> URL webhook у скрапері — `http://localhost:5678/webhook-test/avrora-bad-products`
-> (тестовий). Для продакшн-режиму змініть `N8N_WEBHOOK_URL` у `scraper.py` на
+> The webhook URL in the scraper is `http://localhost:5678/webhook-test/avrora-bad-products`
+> (test). For production mode, change `N8N_WEBHOOK_URL` in `scraper.py` to
 > `http://localhost:5678/webhook/avrora-bad-products`.
 
-## 3. Запуск скрапера
+## 3. Run the scraper
 
-Створіть та активуйте віртуальне середовище, встановіть залежності й запустіть:
+Create and activate a virtual environment, install the dependencies, and run:
 
 ```bash
 python3 -m venv .venv
@@ -87,11 +88,11 @@ pip install -r requirements.txt
 python scraper.py
 ```
 
-Скрапер обійде категорію, відфільтрує товари з рейтингом ≤ 3.5 і надішле їх у n8n.
-У консолі ви побачите статус відповіді від n8n.
+The scraper crawls the category, filters products with a rating ≤ 3.5, and sends
+them to n8n. The response status from n8n is printed to the console.
 
-## Налаштування
+## Configuration
 
-- `target_url` у `scraper.py` — категорія для аналізу
-  (за замовчуванням `https://avrora.ua/ximiya-zasobi-dlya-prannya/`).
-- `N8N_WEBHOOK_URL` — адреса webhook n8n.
+- `target_url` in `scraper.py` — the category to analyze
+  (defaults to `https://avrora.ua/ximiya-zasobi-dlya-prannya/`).
+- `N8N_WEBHOOK_URL` — the n8n webhook address.
